@@ -68,7 +68,7 @@ class App extends React.Component<{}, IAppState> {
   public render(): JSX.Element {
     return (
       <>
-        <h1>React Sigma</h1>
+        <h1>react-sigma</h1>
         <p>{"Number of nodes"}</p>
         <input type="text" onChange={(event) => this.setState({ nodesCount: Number(event.target.value) })} value={this.state.nodesCount} />
         <p>{"Number of edges"}</p>

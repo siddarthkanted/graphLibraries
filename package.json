@@ -3,13 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@types/lodash-es": "^4.17.3",
     "jest-image-snapshot": "^2.12.0",
+    "lodash": "^4.17.15",
     "react": "^16.13.0",
     "react-cytoscape": "^1.0.6",
     "react-dom": "^16.13.0",
     "react-graph-vis": "^1.0.5",
     "react-scripts-ts": "3.1.0",
     "react-sigma": "^1.2.34",
+    "react-vis": "^1.11.7",
     "regraph": "file:../regraph-1.10.0.tgz"
   },
   "scripts": {
@@ -20,6 +23,7 @@
   },
   "devDependencies": {
     "@types/jest": "^25.1.4",
+    "@types/lodash": "^4.14.149",
     "@types/node": "^13.9.1",
     "@types/react": "^16.9.23",
     "@types/react-dom": "^16.9.5",

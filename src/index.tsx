@@ -30,6 +30,11 @@ ReactDOM.render(
   document.getElementById('regraphDiv') as HTMLElement
 );
 
+// ReactDOM.render(
+//   <ReactVis />,
+//   document.getElementById('reactVisDiv') as HTMLElement
+// );
+
 
 // visDiv
 

@@ -12,6 +12,7 @@
   <link rel="manifest" href="%PUBLIC_URL%/manifest.json">
   <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
   <link rel="stylesheet" href="index.css">
+  <!-- <link href="//cdnjs.cloudflare.com/ajax/libs/vis/4.20.1/vis-network.min.css"> -->
   <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.
@@ -32,10 +33,12 @@
     <li id="sigmaNav" class="navItem"  onclick="navFunc('sigmaDiv')">Sigma</li>
     <li id="visNav" class="navItem"  onclick="navFunc('visDiv')">Vis</li>
     <li id="regraphNav" class="navItem"  onclick="navFunc('regraphDiv')">Regraph</li>
+    <!-- <li id="reactVisNav" class="navItem"  onclick="navFunc('reactVisDiv')">ReactVis</li> -->
   </ul>
   <div id="sigmaDiv" class="graph"> </div>
   <div id="visDiv" class="graph"> </div>
   <div id="regraphDiv" class="graph"> </div>
+  <div id="reactVisDiv" class="graph"> </div>
   
   <script>
     function navFunc(id) {

@@ -129,7 +129,7 @@ class Regraph extends React.Component<{}, IRegraphState> {
     public render(): JSX.Element {
         return (
             <>
-                <h1>Regraph</h1>
+                <h1>regraph</h1>
                 <p>{"Number of nodes"}</p>
                 <input type="text" onChange={(event) => this.setState({ nodesCount: Number(event.target.value) })} value={this.state.nodesCount} />
                 <p>{"Number of edges"}</p>
