@@ -41,7 +41,7 @@ class Regraph extends React.Component<{}, IRegraphState> {
     constructor(props: {}) {
         super(props);
         this.state = {
-            edgesCount: 250000,
+            edgesCount: 20000,
             graph: {},
             isForceAtlas: false,
             isLoading: Status.NonStarted,
@@ -49,7 +49,7 @@ class Regraph extends React.Component<{}, IRegraphState> {
             isRendering: false,
             layout: "organic",
             nodes: [],
-            nodesCount: 50000,
+            nodesCount: 5000,
             options: 0,
             positions: {},
             size: 7
@@ -70,8 +70,8 @@ class Regraph extends React.Component<{}, IRegraphState> {
                     size: i["size"] * this.state.size,
                 };
                 positions["nodes" + i["id"]] = {
-                    x: i["x"],
-                    y: i["y"]
+                    x: i["x"] * 10000,
+                    y: i["y"] * 10000
                 };
             });
             edges.edges.filter(this.edgeFilter).splice(0, this.state.edgesCount).forEach(

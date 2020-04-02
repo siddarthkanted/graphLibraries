@@ -1,6 +1,7 @@
 import * as React from 'react';
 import Graph from "react-graph-vis";
 
+
 interface IVisState {
     options: number;
     isLoading: Status;
@@ -44,7 +45,7 @@ class Vis extends React.Component<{}, IVisState> {
             nodes: [],
             nodesCount: 5000,
             nodesPositionWeight: 10000,
-            nodesSize: 100,
+            nodesSize: 10000,
             options: 0,
             removeNodes: 0,
             scaleFactor: 0.5,
@@ -67,9 +68,9 @@ class Vis extends React.Component<{}, IVisState> {
             cid: node.id % 5,
             color: this.getRandomColor(),
             id: node.id,
-            label: node.id,
-            title: node.id,
-            value: node.size,
+            label: "node" + node.id,
+            title: "node" + node.id,
+            size: node.size * this.state.nodesSize,
             x: this.state.isPosition ? node.x * this.state.nodesPositionWeight : undefined,
             y: this.state.isPosition ? node.y * this.state.nodesPositionWeight : undefined
         };
@@ -143,11 +144,9 @@ class Vis extends React.Component<{}, IVisState> {
             <>
                 {this.renderMetadata()}
                 <button onClick={() => this.setState({ isRendering: true })}>{"Vis Start rendering"}</button>
-                <button onClick={() => this.clusterByCid(0)}>{"cluster id 0"}</button>
-                <button onClick={() => this.clusterByCid(1)}>{"cluster id 1"}</button>
-                <button onClick={() => this.clusterByCid(2)}>{"cluster id 2"}</button>
-                <button onClick={() => this.clusterByCid(3)}>{"cluster id 3"}</button>
-                <button onClick={() => this.clusterByCid(4)}>{"cluster id 4"}</button>
+                <button onClick={() => this.clusterByCid()}>{"cluster nodes id%5"}</button>
+                <button onClick={() => this.state.networkInstance.clusterByConnection(1)}>{"cluster nodes with id 1 and its neighbour"}</button>
+                <button onClick={() => this.state.networkInstance.clusterOutliers()}>{"cluster nodes with number of edge 1"}</button>
                 {this.state.isRendering && this.startRendering()}
                 <p>{"Remove/Add all nodes from id 0 to n"}</p>
                 <input type="textbox" id="range" onChange={(event) => this.setState({ removeNodes: Number(event.target.value) })} />
@@ -185,6 +184,16 @@ class Vis extends React.Component<{}, IVisState> {
                 smooth: false,
                 width: 0.5,
             },
+            scaling: {
+                min: 1000,
+                max: 2000,
+                label: {
+                    min: 50,
+                    max: 100,
+                    drawThreshold: 10,
+                    maxVisible: 60
+                },
+            },
             height: "100%",
             interaction: {
                 hover: true,
@@ -201,18 +210,17 @@ class Vis extends React.Component<{}, IVisState> {
                     strokeWidth: 2,
                 },
                 scaling: {
-                    label: {
-                        enabled: false
-                    },
-                    max: 30,
                     min: 10,
-                },
-                shape: 'dot',
+                    max: 30,
+                    label: {
+                      enabled: true
+                    }
+                  },
             },
             physics: {
                 enabled: this.state.isPhysicsEnabled
             },
-            width: "100%"
+            width: "100%",
         };
         const events = {
             selectNode: this.onSelectNode
@@ -235,24 +243,36 @@ class Vis extends React.Component<{}, IVisState> {
         }
     }
 
-    private clusterByCid = (clusterId: number) => {
-        const clusterOptionsByData = {
-            joinCondition(childOptions: any) {
-                return childOptions.cid === clusterId;
-            },
-            clusterNodeProperties: {
-                borderWidth: 3,
-                color: '#000',
-                font: {
-                    color: '#000',
-                    size: 14
+    private clusterByCid = () => {
+        this.state.networkInstance.setData(this.state.filteredGraph);
+        for (let i = 0; i < 5; i++) {
+            const clusterOptionsByData = {
+                joinCondition(childOptions: any) {
+                    return childOptions.cid === i;
                 },
-                id: 'cluster:' + clusterId,
-                label: 'group:' + clusterId,
-                shape: 'dot'
-            }
-        };
-        this.state.networkInstance.cluster(clusterOptionsByData);
+                processProperties(clusterOptions: any, childNodes: any, childEdges: any) {
+                    let totalMass = 0;
+                    for (let j = 0; j < childNodes.length; j++) {
+                        totalMass += childNodes[j].mass;
+                    }
+                    clusterOptions.mass = totalMass;
+                    return clusterOptions;
+                },
+                clusterNodeProperties: {
+                    borderWidth: 3,
+                    color: this.getRandomColor(),
+                    font: {
+                        color: this.getRandomColor(),
+                        size: 14
+                    },
+                    id: 'cluster:' + i,
+                    label: 'group:' + i,
+                    shape: 'dot',
+                    size: 400
+                }
+            };
+            this.state.networkInstance.cluster(clusterOptionsByData);
+        }
     }
 }
 
