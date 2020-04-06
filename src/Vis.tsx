@@ -21,6 +21,7 @@ interface IVisState {
     scaleFactor: number;
     networkInstance: any;
     startTime: number;
+    forceAtlasIteration: number;
 }
 
 enum Status {
@@ -50,7 +51,8 @@ class Vis extends React.Component<{}, IVisState> {
             options: 0,
             removeNodes: 0,
             scaleFactor: 0.5,
-            startTime: Date.now()
+            startTime: Date.now(),
+            forceAtlasIteration: 200
         };
     }
 
@@ -73,8 +75,8 @@ class Vis extends React.Component<{}, IVisState> {
             label: "node" + node.id,
             title: "node" + node.id,
             size: node.size * this.state.nodesSize,
-            x: this.state.isPosition ? node.x * this.state.nodesPositionWeight : undefined,
-            y: this.state.isPosition ? node.y * this.state.nodesPositionWeight : undefined
+            x: this.state.isPosition && node.x ? node.x * this.state.nodesPositionWeight : undefined,
+            y: this.state.isPosition && node.y ? node.y * this.state.nodesPositionWeight : undefined
         };
     }
 
@@ -133,14 +135,45 @@ class Vis extends React.Component<{}, IVisState> {
                 <input type="checkbox" checked={this.state.isPosition} onChange={(event) => this.setState({ isPosition: event.target.checked })} />
                 <p>{"forceAtlas2base"}</p>
                 <input type="checkbox" checked={this.state.isForceAtlas} onChange={(event) => this.setState({ isForceAtlas: event.target.checked })} />
+                <p>{"forceAtlas iteration count"}</p>
+                <input type="text" onChange={(event) => this.setState({ forceAtlasIteration: Number(event.target.value) })} value={this.state.forceAtlasIteration} />
                 <div>
                     <button onClick={this.loadData}>{"Vis Load data to react state"}</button>
                     <button onClick={this.loadHighlyConnectedGraph}>{"Load highly connected graph"}</button>
+                    <button onClick={() => this.loadGplus("/gplus/nodes_5000.json")}>{"nodes_5000.json"}</button>
+                    <button onClick={() => this.loadGplus("/gplus/nodes_5000_reduced.json")}>{"nodes_5000_reduced.json"}</button>
+                    <button onClick={() => this.loadGplus("/gplus/nodes_10000.json")}>{"nodes_10000.json"}</button>
+                    <button onClick={() => this.loadGplus("/gplus/nodes_1000.json")}>{"nodes_1000.json"}</button>
+                    <button onClick={() => this.loadGplus("/gplus/nodes_1000_reduced.json")}>{"nodes_1000_reduced.json"}</button>
+                    <button onClick={() => this.loadGplus("/gplus/nodes_2000.json")}>{"nodes_2000.json"}</button>
+                    <button onClick={() => this.loadGplus("/gplus/nodes_2000_reduced.json")}>{"nodes_2000_reduced.json"}</button>
                 </div>
                 <p>{"Loading " + this.state.isLoading}</p>
                 {this.state.isLoading === Status.Completed && this.afterLoading()}
             </>
         );
+    }
+
+    private loadGplus = (filePath: string) => {
+        this.setState({ isLoading: Status.Loading, isRendering: false });
+        const edges: never[] = [];
+        fetch(filePath).then(x => x.json().then((y) => {
+            const nodes = Object.keys(y).map((key) => this.gplusNode(key, y[key], edges));
+            this.setState({ graph: { nodes, edges }, filteredGraph: { nodes, edges }, isLoading: Status.Completed });
+        }));
+    }
+
+    private gplusNode = (key:any, value:any, edgesArray: any) => {
+        value["edges"].forEach((element: any) => {
+            edgesArray.push({ from: key, to: element});
+        });
+        return {
+            color: this.getRandomColor(),
+            id: key,
+            label: "node" + key,
+            title: "node" + key,
+            size: value.nodeSize ? value.nodeSize : undefined
+        };
     }
 
     private afterLoading = () => {
@@ -203,7 +236,7 @@ class Vis extends React.Component<{}, IVisState> {
                 stabilization: {
                     enabled: true,
                     // 2000 recommended by vis
-                    iterations: 100,
+                    iterations: this.state.forceAtlasIteration,
                     updateInterval: 25
                 }
             }
@@ -263,7 +296,7 @@ class Vis extends React.Component<{}, IVisState> {
                 enabled: true,
                 stabilization: {
                     enabled: true,
-                    iterations: 1,
+                    iterations: this.state.forceAtlasIteration,
                     updateInterval: 25
                 }
             },
@@ -292,7 +325,7 @@ class Vis extends React.Component<{}, IVisState> {
     private onStabilizationIterationsDone = () => {
         this.state.networkInstance.physics.physicsEnabled = this.state.isPhysicsEnabled;
         const millis = Date.now() - this.state.startTime;
-        const seconds = ((millis % 60000) / 1000).toFixed(0);
+        const seconds = (millis / 1000).toFixed(1);
         this.setState({ startTime: Number(seconds) });
     }
 
