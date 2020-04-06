@@ -45,7 +45,7 @@ class Vis extends React.Component<{}, IVisState> {
             nodes: [],
             nodesCount: 5000,
             nodesPositionWeight: 10000,
-            nodesSize: 10000,
+            nodesSize: 1000,
             options: 0,
             removeNodes: 0,
             scaleFactor: 0.5,
@@ -100,12 +100,12 @@ class Vis extends React.Component<{}, IVisState> {
     }
 
     public loadData = () => {
-        this.setState({ isLoading: Status.Loading, isRendering: false, isForceAtlas: false });
+        this.setState({ isLoading: Status.Loading, isRendering: false});
         fetch("/nodes.json").then(x => x.json().then((y) => this.nodesComputation(y)));
     }
 
     public loadHighlyConnectedGraph = () => {
-        this.setState({ isLoading: Status.Loading, isRendering: false, isForceAtlas: false });
+        this.setState({ isLoading: Status.Loading, isRendering: false});
         fetch("/artic.json").then(x => x.json().then((y) => {
             const nodes = y.nodes.map(this.getNode);
             const edges = y.edges.map(this.getEdge);
@@ -129,6 +129,8 @@ class Vis extends React.Component<{}, IVisState> {
                 <input type="checkbox" onChange={(event) => this.setState({ isPhysicsEnabled: event.target.checked })} />
                 <p>{"Positions"}</p>
                 <input type="checkbox" checked={this.state.isPosition} onChange={(event) => this.setState({ isPosition: event.target.checked })} />
+                <p>{"forceAtlas2base"}</p>
+                <input type="checkbox" checked={this.state.isForceAtlas} onChange={(event) => this.setState({ isForceAtlas: event.target.checked })} />
                 <div>
                     <button onClick={this.loadData}>{"Vis Load data to react state"}</button>
                     <button onClick={this.loadHighlyConnectedGraph}>{"Load highly connected graph"}</button>
@@ -168,6 +170,41 @@ class Vis extends React.Component<{}, IVisState> {
                 <p>{"edges length " + this.state.graph["edges"]!.length}</p>
             </>
         )
+    }
+
+    private getForceAtlasOptions = () => {
+        return {
+            nodes: {
+              shape: "dot",
+              size: 16,
+              scaling: {
+                min: 10,
+                max: 30,
+                label: {
+                  enabled: true
+                }
+              },
+            },
+            layout: {
+              randomSeed: 34
+            },
+            physics: {
+              forceAtlas2Based: {
+                gravitationalConstant: -26,
+                centralGravity: 0.005,
+                springLength: 230,
+                springConstant: 0.18
+              },
+              maxVelocity: 146,
+              solver: "forceAtlas2Based",
+              timestep: 0.35,
+              stabilization: {
+                enabled: true,
+                iterations: 2000,
+                updateInterval: 25
+              }
+            }
+          };
     }
 
     private startRendering = () => {
@@ -229,7 +266,7 @@ class Vis extends React.Component<{}, IVisState> {
             <Graph
                 getNetwork={(networkInstance: any) => this.setState({ networkInstance })}
                 graph={this.state.filteredGraph}
-                options={options}
+                options={this.state.isForceAtlas ? this.getForceAtlasOptions() : options}
                 events={events}
             />
         );
@@ -244,19 +281,10 @@ class Vis extends React.Component<{}, IVisState> {
     }
 
     private clusterByCid = () => {
-        this.state.networkInstance.setData(this.state.filteredGraph);
         for (let i = 0; i < 5; i++) {
             const clusterOptionsByData = {
                 joinCondition(childOptions: any) {
                     return childOptions.cid === i;
-                },
-                processProperties(clusterOptions: any, childNodes: any, childEdges: any) {
-                    let totalMass = 0;
-                    for (let j = 0; j < childNodes.length; j++) {
-                        totalMass += childNodes[j].mass;
-                    }
-                    clusterOptions.mass = totalMass;
-                    return clusterOptions;
                 },
                 clusterNodeProperties: {
                     borderWidth: 3,
@@ -267,8 +295,8 @@ class Vis extends React.Component<{}, IVisState> {
                     },
                     id: 'cluster:' + i,
                     label: 'group:' + i,
-                    shape: 'dot',
-                    size: 400
+                    shape: 'database',
+                    size: 50
                 }
             };
             this.state.networkInstance.cluster(clusterOptionsByData);

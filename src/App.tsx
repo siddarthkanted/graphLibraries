@@ -23,14 +23,14 @@ class App extends React.Component<{}, IAppState> {
   constructor(props: {}) {
     super(props);
     this.state = {
-      edgesCount: 250000,
+      edgesCount: 20000,
       graph: {},
       isForceAtlas: false,
       isLoading: Status.NonStarted,
       isRandomizeNodePositions: false,
       isRendering: false,
       nodes: [],
-      nodesCount: 50000,
+      nodesCount: 5000,
       options: 0
     };
   }
