@@ -296,7 +296,7 @@ class Vis extends React.Component<{}, IVisState> {
                 enabled: true,
                 stabilization: {
                     enabled: true,
-                    iterations: this.state.forceAtlasIteration,
+                    iterations: 1,
                     updateInterval: 25
                 }
             },
