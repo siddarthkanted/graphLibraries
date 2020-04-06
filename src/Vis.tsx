@@ -20,6 +20,7 @@ interface IVisState {
     removeNodes: number;
     scaleFactor: number;
     networkInstance: any;
+    startTime: number;
 }
 
 enum Status {
@@ -49,6 +50,7 @@ class Vis extends React.Component<{}, IVisState> {
             options: 0,
             removeNodes: 0,
             scaleFactor: 0.5,
+            startTime: Date.now()
         };
     }
 
@@ -100,12 +102,12 @@ class Vis extends React.Component<{}, IVisState> {
     }
 
     public loadData = () => {
-        this.setState({ isLoading: Status.Loading, isRendering: false});
+        this.setState({ isLoading: Status.Loading, isRendering: false });
         fetch("/nodes.json").then(x => x.json().then((y) => this.nodesComputation(y)));
     }
 
     public loadHighlyConnectedGraph = () => {
-        this.setState({ isLoading: Status.Loading, isRendering: false});
+        this.setState({ isLoading: Status.Loading, isRendering: false });
         fetch("/artic.json").then(x => x.json().then((y) => {
             const nodes = y.nodes.map(this.getNode);
             const edges = y.edges.map(this.getEdge);
@@ -145,7 +147,7 @@ class Vis extends React.Component<{}, IVisState> {
         return (
             <>
                 {this.renderMetadata()}
-                <button onClick={() => this.setState({ isRendering: true })}>{"Vis Start rendering"}</button>
+                <button onClick={() => this.setState({ isRendering: true, startTime: Date.now() })}>{"Vis Start rendering"}</button>
                 <button onClick={() => this.clusterByCid()}>{"cluster nodes id%5"}</button>
                 <button onClick={() => this.state.networkInstance.clusterByConnection(1)}>{"cluster nodes with id 1 and its neighbour"}</button>
                 <button onClick={() => this.state.networkInstance.clusterOutliers()}>{"cluster nodes with number of edge 1"}</button>
@@ -175,36 +177,37 @@ class Vis extends React.Component<{}, IVisState> {
     private getForceAtlasOptions = () => {
         return {
             nodes: {
-              shape: "dot",
-              size: 16,
-              scaling: {
-                min: 10,
-                max: 30,
-                label: {
-                  enabled: true
-                }
-              },
+                shape: "dot",
+                size: 16,
+                scaling: {
+                    min: 10,
+                    max: 30,
+                    label: {
+                        enabled: true
+                    }
+                },
             },
             layout: {
-              randomSeed: 34
+                randomSeed: 34
             },
             physics: {
-              forceAtlas2Based: {
-                gravitationalConstant: -26,
-                centralGravity: 0.005,
-                springLength: 230,
-                springConstant: 0.18
-              },
-              maxVelocity: 146,
-              solver: "forceAtlas2Based",
-              timestep: 0.35,
-              stabilization: {
-                enabled: true,
-                iterations: 2000,
-                updateInterval: 25
-              }
+                forceAtlas2Based: {
+                    gravitationalConstant: -26,
+                    centralGravity: 0.005,
+                    springLength: 230,
+                    springConstant: 0.18
+                },
+                maxVelocity: 146,
+                solver: "forceAtlas2Based",
+                timestep: 0.35,
+                stabilization: {
+                    enabled: true,
+                    // 2000 recommended by vis
+                    iterations: 100,
+                    updateInterval: 25
+                }
             }
-          };
+        };
     }
 
     private startRendering = () => {
@@ -238,7 +241,9 @@ class Vis extends React.Component<{}, IVisState> {
                 navigationButtons: true
             },
             layout: {
-                hierarchical: false
+                hierarchical: false,
+                randomSeed: undefined,
+                improvedLayout: false
             },
             nodes: {
                 font: {
@@ -250,26 +255,45 @@ class Vis extends React.Component<{}, IVisState> {
                     min: 10,
                     max: 30,
                     label: {
-                      enabled: true
+                        enabled: true
                     }
-                  },
+                },
             },
             physics: {
-                enabled: this.state.isPhysicsEnabled
+                enabled: true,
+                stabilization: {
+                    enabled: true,
+                    iterations: 1,
+                    updateInterval: 25
+                }
             },
-            width: "100%",
+            width: "100%"
         };
         const events = {
             selectNode: this.onSelectNode
         };
         return (
-            <Graph
-                getNetwork={(networkInstance: any) => this.setState({ networkInstance })}
-                graph={this.state.filteredGraph}
-                options={this.state.isForceAtlas ? this.getForceAtlasOptions() : options}
-                events={events}
-            />
+            <>
+                <p>{"Graph API time duration seconds" + this.state.startTime}</p>
+                <Graph
+                    getNetwork={this.setNetworkInstance}
+                    graph={this.state.filteredGraph}
+                    options={this.state.isForceAtlas ? this.getForceAtlasOptions() : options}
+                    events={events}
+                />
+            </>
         );
+    }
+
+    private setNetworkInstance = (networkInstance: any) => {
+        this.setState({ networkInstance }, () => this.state.networkInstance.once("stabilizationIterationsDone", this.onStabilizationIterationsDone));
+    }
+
+    private onStabilizationIterationsDone = () => {
+        this.state.networkInstance.physics.physicsEnabled = this.state.isPhysicsEnabled;
+        const millis = Date.now() - this.state.startTime;
+        const seconds = ((millis % 60000) / 1000).toFixed(0);
+        this.setState({ startTime: Number(seconds) });
     }
 
     private onSelectNode = (params: any) => {
@@ -295,8 +319,7 @@ class Vis extends React.Component<{}, IVisState> {
                     },
                     id: 'cluster:' + i,
                     label: 'group:' + i,
-                    shape: 'database',
-                    size: 50
+                    shape: 'database'
                 }
             };
             this.state.networkInstance.cluster(clusterOptionsByData);
