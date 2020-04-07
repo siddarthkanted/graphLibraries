@@ -1,3 +1,5 @@
+import * as _ from 'lodash';
+import { cloneDeep } from 'lodash-es';
 import * as React from 'react';
 import Graph from "react-graph-vis";
 
@@ -22,6 +24,7 @@ interface IVisState {
     networkInstance: any;
     startTime: number;
     forceAtlasIteration: number;
+    nodesRecolor: number;
 }
 
 enum Status {
@@ -52,7 +55,8 @@ class Vis extends React.Component<{}, IVisState> {
             removeNodes: 0,
             scaleFactor: 0.5,
             startTime: Date.now(),
-            forceAtlasIteration: 200
+            forceAtlasIteration: 200,
+            nodesRecolor: 0
         };
     }
 
@@ -72,8 +76,8 @@ class Vis extends React.Component<{}, IVisState> {
             cid: node.id % 5,
             color: this.getRandomColor(),
             id: node.id,
-            label: "node" + node.id,
-            title: "node" + node.id,
+            // label: "node" + node.id,
+            // title: "node" + node.id,
             size: node.size * this.state.nodesSize,
             x: this.state.isPosition && node.x ? node.x * this.state.nodesPositionWeight : undefined,
             y: this.state.isPosition && node.y ? node.y * this.state.nodesPositionWeight : undefined
@@ -100,7 +104,7 @@ class Vis extends React.Component<{}, IVisState> {
     }
 
     public getEdge = (edge: any) => {
-        return { from: edge.source, to: edge.target }
+        return { from: edge.source, to: edge.target, color: { color: this.getRandomColor() } }
     }
 
     public loadData = () => {
@@ -140,13 +144,13 @@ class Vis extends React.Component<{}, IVisState> {
                 <div>
                     <button onClick={this.loadData}>{"Vis Load data to react state"}</button>
                     <button onClick={this.loadHighlyConnectedGraph}>{"Load highly connected graph"}</button>
-                    <button onClick={() => this.loadGplus("/gplus/nodes_5000.json")}>{"nodes_5000.json"}</button>
-                    <button onClick={() => this.loadGplus("/gplus/nodes_5000_reduced.json")}>{"nodes_5000_reduced.json"}</button>
-                    <button onClick={() => this.loadGplus("/gplus/nodes_10000.json")}>{"nodes_10000.json"}</button>
-                    <button onClick={() => this.loadGplus("/gplus/nodes_1000.json")}>{"nodes_1000.json"}</button>
-                    <button onClick={() => this.loadGplus("/gplus/nodes_1000_reduced.json")}>{"nodes_1000_reduced.json"}</button>
-                    <button onClick={() => this.loadGplus("/gplus/nodes_2000.json")}>{"nodes_2000.json"}</button>
-                    <button onClick={() => this.loadGplus("/gplus/nodes_2000_reduced.json")}>{"nodes_2000_reduced.json"}</button>
+                    <button onClick={() => this.loadGplus("nodes_5000.json")}>{"nodes_5000.json"}</button>
+                    <button onClick={() => this.loadGplus("nodes_5000_reduced.json")}>{"nodes_5000_reduced.json"}</button>
+                    <button onClick={() => this.loadGplus("nodes_10000.json")}>{"nodes_10000.json"}</button>
+                    <button onClick={() => this.loadGplus("nodes_1000.json")}>{"nodes_1000.json"}</button>
+                    <button onClick={() => this.loadGplus("nodes_1000_reduced.json")}>{"nodes_1000_reduced.json"}</button>
+                    <button onClick={() => this.loadGplus("nodes_2000.json")}>{"nodes_2000.json"}</button>
+                    <button onClick={() => this.loadGplus("nodes_2000_reduced.json")}>{"nodes_2000_reduced.json"}</button>
                 </div>
                 <p>{"Loading " + this.state.isLoading}</p>
                 {this.state.isLoading === Status.Completed && this.afterLoading()}
@@ -154,24 +158,39 @@ class Vis extends React.Component<{}, IVisState> {
         );
     }
 
-    private loadGplus = (filePath: string) => {
+    private loadGplus = (fileName: string) => {
+        const filePath = "/gplus/" + fileName;
+        const filePathWithPosition = "/gplusWithPosition/" + fileName;
         this.setState({ isLoading: Status.Loading, isRendering: false });
         const edges: never[] = [];
         fetch(filePath).then(x => x.json().then((y) => {
             const nodes = Object.keys(y).map((key) => this.gplusNode(key, y[key], edges));
-            this.setState({ graph: { nodes, edges }, filteredGraph: { nodes, edges }, isLoading: Status.Completed });
+            if (!this.state.isPosition) {
+                this.setState({ graph: { nodes, edges }, filteredGraph: { nodes, edges }, isLoading: Status.Completed });
+            }
+            else {
+                const nodesDict = _.keyBy(nodes, 'id');
+                fetch(filePathWithPosition).then(x1 => x1.json().then((y1) => {
+                    y1.forEach((element: any) => {
+                        nodesDict[element.id]["x"] = element.x;
+                        nodesDict[element.id]["y"] = element.y;
+                        nodesDict[element.id]["color"] = element.color;
+                    });
+                    this.setState({ graph: { nodes, edges }, filteredGraph: { nodes, edges }, isLoading: Status.Completed });
+                }))
+            }
         }));
     }
 
-    private gplusNode = (key:any, value:any, edgesArray: any) => {
+    private gplusNode = (key: any, value: any, edgesArray: any) => {
         value["edges"].forEach((element: any) => {
-            edgesArray.push({ from: key, to: element});
+            edgesArray.push({ from: key, to: element, color: { color: this.getRandomColor() } });
         });
         return {
             color: this.getRandomColor(),
             id: key,
-            label: "node" + key,
-            title: "node" + key,
+            // label: "node" + key,
+            // title: "node" + key,
             size: value.nodeSize ? value.nodeSize : undefined
         };
     }
@@ -186,10 +205,44 @@ class Vis extends React.Component<{}, IVisState> {
                 <button onClick={() => this.state.networkInstance.clusterOutliers()}>{"cluster nodes with number of edge 1"}</button>
                 {this.state.isRendering && this.startRendering()}
                 <p>{"Remove/Add all nodes from id 0 to n"}</p>
-                <input type="textbox" id="range" onChange={(event) => this.setState({ removeNodes: Number(event.target.value) })} />
+                <input type="textbox" onChange={(event) => this.setState({ removeNodes: Number(event.target.value) })} />
                 <button onClick={this.filterNodes}>{"refresh"}</button>
+                <p>{"Re-color all nodes from 1 to n"}</p>
+                <input type="textbox" onChange={(event) => this.setState({ nodesRecolor: Number(event.target.value) })} />
+                <button onClick={this.reColorNodes}>{"refresh"}</button>
+                <button onClick={this.exportFiles} id="export">{"export nodes and edges"}</button>
             </>
         );
+    }
+
+    private exportFiles = () => {
+        if (this.state.networkInstance) {
+            const nodes = Object.keys(this.state.networkInstance.body.nodes).map(this.getExportNode);
+            const dlbtn = document.getElementById("export");
+            const obj = { nodes };
+            const file = new Blob([JSON.stringify(obj)], { "type": "text/plain" });
+            dlbtn!["href"] = URL.createObjectURL(file);
+            dlbtn!["download"] = name;
+        }
+    }
+
+    private getExportNode = (nodeId: any) => {
+        const node = this.state.networkInstance.body.nodes[nodeId];
+        return {
+            id: node.id,
+            color: node._localColor,
+            x: node.x,
+            y: node.y
+        };
+    }
+
+    private reColorNodes = () => {
+        const color: string = this.getRandomColor();
+        const nodes = cloneDeep(this.state.graph["nodes"]);
+        for (let i = 0; i < this.state.nodesRecolor; i++) {
+            nodes[i].color = color;
+        }
+        this.setState({ filteredGraph: { nodes, edges: this.state.graph["edges"] } });
     }
 
     private filterNodes = () => {
@@ -210,13 +263,13 @@ class Vis extends React.Component<{}, IVisState> {
     private getForceAtlasOptions = () => {
         return {
             nodes: {
-                shape: "dot",
-                size: 16,
+                shape: "circle",
+                size: this.state.nodesSize,
                 scaling: {
-                    min: 10,
-                    max: 30,
+                    min: this.state.nodesSize,
+                    max: this.state.nodesSize,
                     label: {
-                        enabled: true
+                        enabled: false
                     }
                 },
             },
@@ -243,8 +296,8 @@ class Vis extends React.Component<{}, IVisState> {
         };
     }
 
-    private startRendering = () => {
-        const options = {
+    private withPositionOptions = () => {
+        return {
             autoResize: false,
             edges: {
                 arrows: {
@@ -302,16 +355,19 @@ class Vis extends React.Component<{}, IVisState> {
             },
             width: "100%"
         };
+    }
+
+    private startRendering = () => {
         const events = {
             selectNode: this.onSelectNode
         };
         return (
             <>
-                <p>{"Graph API time duration seconds" + this.state.startTime}</p>
+                <p>{"Loading time " + this.state.startTime}</p>
                 <Graph
                     getNetwork={this.setNetworkInstance}
                     graph={this.state.filteredGraph}
-                    options={this.state.isForceAtlas ? this.getForceAtlasOptions() : options}
+                    options={this.state.isForceAtlas ? this.getForceAtlasOptions() : this.withPositionOptions()}
                     events={events}
                 />
             </>
@@ -323,6 +379,7 @@ class Vis extends React.Component<{}, IVisState> {
     }
 
     private onStabilizationIterationsDone = () => {
+        this.state.networkInstance.storePositions();
         this.state.networkInstance.physics.physicsEnabled = this.state.isPhysicsEnabled;
         const millis = Date.now() - this.state.startTime;
         const seconds = (millis / 1000).toFixed(1);
