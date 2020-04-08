@@ -246,7 +246,7 @@ class Vis extends React.Component<{}, IVisState> {
     }
 
     private filterNodes = () => {
-        const nodes = this.state.graph["nodes"].filter((x: any) => x.id >= this.state.removeNodes);
+        const nodes = this.state.graph["nodes"].filter((x: any, count: number) => count >= this.state.removeNodes);
         this.setState({ filteredGraph: { nodes, edges: this.state.graph["edges"] } });
     }
 
