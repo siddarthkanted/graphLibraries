@@ -23,6 +23,8 @@ interface IVisState {
     scaleFactor: number;
     networkInstance: any;
     startTime: number;
+    endTime: number;
+    activity: string;
     forceAtlasIteration: number;
     nodesRecolor: number;
 }
@@ -55,8 +57,10 @@ class Vis extends React.Component<{}, IVisState> {
             removeNodes: 0,
             scaleFactor: 0.5,
             startTime: Date.now(),
+            endTime: Date.now(),
             forceAtlasIteration: 200,
-            nodesRecolor: 0
+            nodesRecolor: 0,
+            activity: "nothing"
         };
     }
 
@@ -200,17 +204,21 @@ class Vis extends React.Component<{}, IVisState> {
         return (
             <>
                 {this.renderMetadata()}
-                <button onClick={() => this.setState({ isRendering: true, startTime: Date.now() })}>{"Vis Start rendering"}</button>
+                <button onClick={() => this.setState({ isRendering: true, startTime: Date.now(), activity: "render clicked" })}>{"Vis Start rendering"}</button>
                 <button onClick={() => this.clusterByCid()}>{"cluster nodes id%5"}</button>
                 <button onClick={() => this.state.networkInstance.clusterByConnection(1)}>{"cluster nodes with id 1 and its neighbour"}</button>
                 <button onClick={() => this.state.networkInstance.clusterOutliers()}>{"cluster nodes with number of edge 1"}</button>
-                {this.state.isRendering && this.startRendering()}
+                <p>{"activity " + this.state.activity}</p>
+                <p>{"Start time " + new Date (this.state.startTime).toUTCString() }</p>
+                <p>{"End time " + new Date (this.state.endTime).toUTCString()}</p>
+                <p>{"Time subtract " + this.timeSubtract()}</p>
                 <p>{"Remove/Add all nodes from id 0 to n"}</p>
                 <input type="textbox" onChange={(event) => this.setState({ removeNodes: Number(event.target.value) })} />
                 <button onClick={this.filterNodes}>{"refresh"}</button>
                 <p>{"Re-color all nodes from 1 to n"}</p>
                 <input type="textbox" onChange={(event) => this.setState({ nodesRecolor: Number(event.target.value) })} />
                 <button onClick={this.reColorNodes}>{"refresh"}</button>
+                {this.state.isRendering && this.startRendering()}
                 {/* <button onClick={this.exportFiles} id="export">{"export nodes and edges"}</button> */}
             </>
         );
@@ -243,12 +251,12 @@ class Vis extends React.Component<{}, IVisState> {
         for (let i = 0; i < this.state.nodesRecolor; i++) {
             nodes[i].color = color;
         }
-        this.setState({ filteredGraph: { nodes, edges: this.state.graph["edges"] } });
+        this.setState({ startTime: Date.now(),  activity: "reColorNodes clicked", filteredGraph: { nodes, edges: this.state.graph["edges"] } });
     }
 
     private filterNodes = () => {
         const nodes = this.state.graph["nodes"].filter((x: any, count: number) => count >= this.state.removeNodes);
-        this.setState({ filteredGraph: { nodes, edges: this.state.graph["edges"] } });
+        this.setState({ startTime: Date.now(), activity: "filter nodes clicked", filteredGraph: { nodes, edges: this.state.graph["edges"] } });
     }
 
     private renderMetadata = () => {
@@ -354,7 +362,7 @@ class Vis extends React.Component<{}, IVisState> {
                 //     }
             },
             physics: {
-                enabled: true,
+                enabled: this.state.isPhysicsEnabled,
                 stabilization: {
                     enabled: true,
                     iterations: 1,
@@ -365,13 +373,23 @@ class Vis extends React.Component<{}, IVisState> {
         };
     }
 
+    private timeSubtract = () => {
+        const millis = this.state.endTime - this.state.startTime;
+        const seconds = (millis / 1000).toFixed(1);
+        return seconds;
+    }
+
+    private afterDrawing = () => {
+        this.setState({ endTime: Date.now() });
+    }
+
     private startRendering = () => {
         const events = {
-            selectNode: this.onSelectNode
+            selectNode: this.onSelectNode,
+            afterDrawing: this.afterDrawing
         };
         return (
             <>
-                <p>{"Loading time " + this.state.startTime}</p>
                 <Graph
                     getNetwork={this.setNetworkInstance}
                     graph={this.state.filteredGraph}
@@ -383,15 +401,16 @@ class Vis extends React.Component<{}, IVisState> {
     }
 
     private setNetworkInstance = (networkInstance: any) => {
-        this.setState({ networkInstance }, () => this.state.networkInstance.once("stabilizationIterationsDone", this.onStabilizationIterationsDone));
+        // this.setState({ networkInstance }, () => this.state.networkInstance.once("stabilizationIterationsDone", this.onStabilizationIterationsDone));
+        this.setState({ networkInstance });
     }
 
-    private onStabilizationIterationsDone = () => {
-        this.state.networkInstance.physics.physicsEnabled = this.state.isPhysicsEnabled;
-        const millis = Date.now() - this.state.startTime;
-        const seconds = (millis / 1000).toFixed(1);
-        this.setState({ startTime: Number(seconds) });
-    }
+    // private onStabilizationIterationsDone = () => {
+    //     // this.state.networkInstance.physics.physicsEnabled = this.state.isPhysicsEnabled;
+    //     const millis = Date.now() - this.state.startTime;
+    //     const seconds = (millis / 1000).toFixed(1);
+    //     this.setState({ startTime: Number(seconds) });
+    // }
 
     private onSelectNode = (params: any) => {
         if (params.nodes.length === 1) {
@@ -402,6 +421,7 @@ class Vis extends React.Component<{}, IVisState> {
     }
 
     private clusterByCid = () => {
+        this.setState({startTime: Date.now(), activity: "clusterNodes clicked"});
         for (let i = 0; i < 5; i++) {
             const clusterOptionsByData = {
                 joinCondition(childOptions: any) {
