@@ -164,7 +164,7 @@ class Vis extends React.Component<{}, IVisState> {
         this.setState({ isLoading: Status.Loading, isRendering: false });
         const edges: never[] = [];
         fetch(filePath).then(x => x.json().then((y) => {
-            const nodes = Object.keys(y).map((key) => this.gplusNode(key, y[key], edges));
+            const nodes = Object.keys(y).map((key, count) => this.gplusNode(key, y[key], edges, count));
             if (!this.state.isPosition) {
                 this.setState({ graph: { nodes, edges }, filteredGraph: { nodes, edges }, isLoading: Status.Completed });
             }
@@ -173,7 +173,7 @@ class Vis extends React.Component<{}, IVisState> {
                 fetch(filePathWithPosition).then(x1 => x1.json().then((y1) => {
                     y1.forEach((element: any) => {
                         nodesDict[element.id]["x"] = element.x;
-                        nodesDict[element.id]["y"] = element.y;
+                        nodesDict[element.id]["y"] = element.y
                         nodesDict[element.id]["color"] = element.color;
                     });
                     this.setState({ graph: { nodes, edges }, filteredGraph: { nodes, edges }, isLoading: Status.Completed });
@@ -182,13 +182,14 @@ class Vis extends React.Component<{}, IVisState> {
         }));
     }
 
-    private gplusNode = (key: any, value: any, edgesArray: any) => {
+    private gplusNode = (key: any, value: any, edgesArray: any, count: number) => {
         value["edges"].forEach((element: any) => {
             edgesArray.push({ from: key, to: element, color: { color: this.getRandomColor() } });
         });
         return {
             color: this.getRandomColor(),
             id: key,
+            cid: count % 5,
             // label: "node" + key,
             // title: "node" + key,
             size: value.nodeSize ? value.nodeSize : undefined
@@ -210,31 +211,31 @@ class Vis extends React.Component<{}, IVisState> {
                 <p>{"Re-color all nodes from 1 to n"}</p>
                 <input type="textbox" onChange={(event) => this.setState({ nodesRecolor: Number(event.target.value) })} />
                 <button onClick={this.reColorNodes}>{"refresh"}</button>
-                <button onClick={this.exportFiles} id="export">{"export nodes and edges"}</button>
+                {/* <button onClick={this.exportFiles} id="export">{"export nodes and edges"}</button> */}
             </>
         );
     }
 
-    private exportFiles = () => {
-        if (this.state.networkInstance) {
-            const nodes = Object.keys(this.state.networkInstance.body.nodes).map(this.getExportNode);
-            const dlbtn = document.getElementById("export");
-            const obj = { nodes };
-            const file = new Blob([JSON.stringify(obj)], { "type": "text/plain" });
-            dlbtn!["href"] = URL.createObjectURL(file);
-            dlbtn!["download"] = name;
-        }
-    }
+    // private exportFiles = () => {
+    //     if (this.state.networkInstance) {
+    //         const nodes = Object.keys(this.state.networkInstance.body.nodes).map(this.getExportNode);
+    //         const dlbtn = document.getElementById("export");
+    //         const obj = { nodes };
+    //         const file = new Blob([JSON.stringify(obj)], { "type": "text/plain" });
+    //         dlbtn!["href"] = URL.createObjectURL(file);
+    //         dlbtn!["download"] = name;
+    //     }
+    // }
 
-    private getExportNode = (nodeId: any) => {
-        const node = this.state.networkInstance.body.nodes[nodeId];
-        return {
-            id: node.id,
-            color: node._localColor,
-            x: node.x,
-            y: node.y
-        };
-    }
+    // private getExportNode = (nodeId: any) => {
+    //     const node = this.state.networkInstance.body.nodes[nodeId];
+    //     return {
+    //         id: node.id,
+    //         color: node._localColor,
+    //         x: node.x,
+    //         y: node.y
+    //     };
+    // }
 
     private reColorNodes = () => {
         const color: string = this.getRandomColor();
@@ -298,33 +299,37 @@ class Vis extends React.Component<{}, IVisState> {
 
     private withPositionOptions = () => {
         return {
-            autoResize: false,
+            // autoResize: false,
             edges: {
-                arrows: {
-                    to: {
-                        enabled: true,
-                        scaleFactor: 0.5
-                    }
+                smooth: {
+                    type: 'continuous'
                 },
-                color: "#000000",
-                smooth: false,
-                width: 0.5,
-            },
-            scaling: {
-                min: 1000,
-                max: 2000,
-                label: {
-                    min: 50,
-                    max: 100,
-                    drawThreshold: 10,
-                    maxVisible: 60
-                },
+                //     arrows: {
+                //         to: {
+                //             enabled: true,
+                //             scaleFactor: 0.5
+                //         }
+                //     },
+                //     color: "#000000",
+                //     smooth: false,
+                //     width: 0.5,
+                // },
+                // scaling: {
+                //     min: 1000,
+                //     max: 2000,
+                //     label: {
+                //         min: 50,
+                //         max: 100,
+                //         drawThreshold: 10,
+                //         maxVisible: 60
+                //     },
             },
             height: "100%",
             interaction: {
-                hover: true,
-                keyboard: true,
-                navigationButtons: true
+                //     hover: true,
+                //     keyboard: true,
+                navigationButtons: true,
+                hideEdgesOnDrag: true
             },
             layout: {
                 hierarchical: false,
@@ -332,25 +337,28 @@ class Vis extends React.Component<{}, IVisState> {
                 improvedLayout: false
             },
             nodes: {
-                font: {
-                    multi: 'html',
-                    strokeColor: '#fff',
-                    strokeWidth: 2,
-                },
-                scaling: {
-                    min: 10,
-                    max: 30,
-                    label: {
-                        enabled: true
-                    }
-                },
+                shapeProperties: {
+                    interpolation: false    // 'true' for intensive zooming
+                }
+                //     font: {
+                //         multi: 'html',
+                //         strokeColor: '#fff',
+                //         strokeWidth: 2,
+                //     },
+                //     scaling: {
+                //         min: 10,
+                //         max: 30,
+                //         label: {
+                //             enabled: true
+                //         }
+                //     }
             },
             physics: {
                 enabled: true,
                 stabilization: {
                     enabled: true,
                     iterations: 1,
-                    updateInterval: 25
+                    updateInterval: 1
                 }
             },
             width: "100%"
@@ -379,7 +387,6 @@ class Vis extends React.Component<{}, IVisState> {
     }
 
     private onStabilizationIterationsDone = () => {
-        this.state.networkInstance.storePositions();
         this.state.networkInstance.physics.physicsEnabled = this.state.isPhysicsEnabled;
         const millis = Date.now() - this.state.startTime;
         const seconds = (millis / 1000).toFixed(1);
